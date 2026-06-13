@@ -16,6 +16,24 @@ REQUIRED_COLUMNS = [
     "HRDCorp Claim"
 ]
 
+COLUMN_VARIATIONS = {
+    "Name of Employer": [
+        "Name of Employer",
+        "Name of Employers",
+        "Name of Employer(s)",
+        "Name of Employers(s)"
+    ],
+    "Name of Trainees": [
+        "Name of Trainees",
+        "Name of Trainee",
+        "Name of Trainee(s)",
+        "Name of Trainees(s)"
+    ],
+    "HRDCorp Claim": [
+        "HRDCorp Claim"
+    ]
+}
+
 FONT_SIZE = 10
 
 DOCX_TEMPLATE = os.path.join("templates", "New DOCX PSMB_SBL_KHAS_T3_01 template.docx")
@@ -63,13 +81,22 @@ st.subheader("Excel Preview")
 
 st.dataframe(df.head())
 
-# ---------------- VALIDATE ----------------
+# ---------------- COLUMN NORMALIZATION ----------------
 
-missing = [
-    col
-    for col in REQUIRED_COLUMNS
-    if col not in df.columns
-]
+def find_column(actual_columns, variations):
+    for variation in variations:
+        if variation in actual_columns:
+            return variation
+    return None
+
+column_map = {}
+missing = []
+for canonical, variations in COLUMN_VARIATIONS.items():
+    found = find_column(df.columns, variations)
+    if found:
+        column_map[canonical] = found
+    else:
+        missing.append(canonical)
 
 if missing:
     st.error(
@@ -79,7 +106,12 @@ if missing:
 
 # ---------------- KEEP REQUIRED COLUMNS ----------------
 
-proc_df = df[REQUIRED_COLUMNS].copy()
+proc_df = df[list(column_map.values())].copy()
+proc_df.rename(columns={
+    column_map["Name of Employer"]: "Name of Employer",
+    column_map["Name of Trainees"]: "Name of Trainees",
+    column_map["HRDCorp Claim"]: "HRDCorp Claim"
+}, inplace=True)
 
 # ---------------- FILTER HRDC ----------------
 
