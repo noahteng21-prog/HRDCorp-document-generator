@@ -1,0 +1,17 @@
+{
+    "deepseek.provider": "deepseek",
+    "deepseek.model": "deepseek-coder",
+    "deepseek.apikey": "sk-d8b5155c3ca849b88a681ec7accbbf23",
+    "deepseek.apiKey": "sk-d8b5155c3ca849b88a681ec7accbbf23",
+    "deepseek.ollamaEndpoint": "",
+    "deepseek.ollamaModel": "",
+    "deepseek.lang": "en",
+    "deepseek.top_p": "1",
+    "deepseek.frequency_penalty": "0",
+    "deepseek.enableCompletion": true,
+    "deepseek.banmaModel": "deepseek-coder",
+    "deepseek.top_k": "50",
+    "deepseek.max_tokens": "4096",
+    "deepseek.temperature": "0.2",
+    "deepseek.baseURL": "https://api.deepseek.com"
+}

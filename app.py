@@ -36,7 +36,7 @@ COLUMN_VARIATIONS = {
 
 FONT_SIZE = 10
 
-DOCX_TEMPLATE = os.path.join("templates", "New DOCX PSMB_SBL_KHAS_T3_01 template.docx")
+DOCX_TEMPLATE = os.path.join("templates", "New dynamic DOCX PSMB_SBL_KHAS_T3_01 template - Copy.docx")
 
 st.set_page_config(
     page_title="HRDC T3 Generator",
@@ -217,6 +217,57 @@ def normalize_docx_placeholders(docx_path):
         return buffer
 
 
+def expand_docx_participant_rows(template_buffer, target_rows):
+    if target_rows <= 0:
+        return template_buffer
+
+    if hasattr(template_buffer, "read"):
+        template_buffer.seek(0)
+        template_data = template_buffer.read()
+    else:
+        template_data = template_buffer
+
+    with zipfile.ZipFile(io.BytesIO(template_data), "r") as zin:
+        doc_xml = zin.read("word/document.xml").decode("utf-8")
+
+    existing_rows = [int(n) for n in re.findall(r"trainee_(\d+)", doc_xml)]
+    current_max = max(existing_rows) if existing_rows else 0
+    if current_max >= target_rows:
+        return io.BytesIO(template_data)
+
+    row_pattern = re.compile(r"(<w:tr[\s\S]*?<\/w:tr>)")
+    rows = row_pattern.findall(doc_xml)
+    template_row = next((row for row in rows if "{{trainee_1}}" in row), None)
+    if template_row is None:
+        return io.BytesIO(template_data)
+
+    placeholder_rows = [row for row in rows if "{{trainee_" in row]
+    if placeholder_rows:
+        insert_pos = doc_xml.index(placeholder_rows[-1]) + len(placeholder_rows[-1])
+    else:
+        insert_pos = doc_xml.index(template_row) + len(template_row)
+
+    clones = []
+    for index in range(current_max + 1, target_rows + 1):
+        clone = template_row
+        clone = clone.replace("{{no_1}}", f"{{{{no_{index}}}}}")
+        clone = clone.replace("{{trainee_1}}", f"{{{{trainee_{index}}}}}")
+        clone = clone.replace("{{employer_1}}", f"{{{{employer_{index}}}}}")
+        clones.append(clone)
+
+    doc_xml = doc_xml[:insert_pos] + "".join(clones) + doc_xml[insert_pos:]
+
+    output_buffer = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(template_data), "r") as zin, zipfile.ZipFile(output_buffer, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == "word/document.xml":
+                data = doc_xml.encode("utf-8")
+            zout.writestr(item, data)
+    output_buffer.seek(0)
+    return output_buffer
+
+
 buffers = {}
 
 # Render Word documents from the DOCX template (one per employer)
@@ -226,22 +277,35 @@ if DOCX_TEMPLATE and os.path.exists(DOCX_TEMPLATE):
         for _, row in grouped.iterrows():
             employer = row["Name of Employer"]
             raw_trainees = [str(t) for t in row["Trainees"]]
+            target_rows = max(len(raw_trainees), 6)
 
-            # Build direct row placeholders for the template's fixed 6 rows
-            context = {}
-            for idx in range(1, 7):
+            expanded_template = expand_docx_participant_rows(
+                normalized_template,
+                target_rows
+            )
+
+            participants = []
+            context = {
+                "course_title": course_title,
+                "training_date": training_date,
+                "participants": participants,
+            }
+
+            for idx in range(1, target_rows + 1):
                 context[f"no_{idx}"] = str(idx)
                 if idx <= len(raw_trainees):
                     context[f"trainee_{idx}"] = raw_trainees[idx - 1]
                     context[f"employer_{idx}"] = employer
+                    participants.append({
+                        "no": idx,
+                        "trainee": raw_trainees[idx - 1],
+                        "employer": employer,
+                    })
                 else:
                     context[f"trainee_{idx}"] = ""
                     context[f"employer_{idx}"] = ""
 
-            context["course_title"] = course_title
-            context["training_date"] = training_date
-
-            tpl = DocxTemplate(normalized_template)
+            tpl = DocxTemplate(expanded_template)
             tpl.render(context)
 
             out = io.BytesIO()
