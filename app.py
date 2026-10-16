@@ -279,6 +279,7 @@ if DOCX_TEMPLATE and os.path.exists(DOCX_TEMPLATE):
                         "no": idx,
                         "trainee": raw_trainees[idx - 1],
                         "employer": employer,
+                        "citizenship": "Malaysian",
                     })
                 else:
                     context[f"trainee_{idx}"] = ""
