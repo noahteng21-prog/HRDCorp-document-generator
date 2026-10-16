@@ -10,27 +10,12 @@ from docxtpl import DocxTemplate
 
 # ---------------- CONFIG ----------------
 
-REQUIRED_COLUMNS = [
-    "Name of Employer",
-    "Name of Trainees",
-    "HRDCorp Claim"
-]
-
 COLUMN_VARIATIONS = {
-    "Name of Employer": [
-        "Name of Employer",
-        "Name of Employers",
-        "Name of Employer(s)",
-        "Name of Employers(s)"
-    ],
     "Name of Trainees": [
         "Name of Trainees",
         "Name of Trainee",
         "Name of Trainee(s)",
         "Name of Trainees(s)"
-    ],
-    "HRDCorp Claim": [
-        "HRDCorp Claim"
     ]
 }
 
@@ -47,6 +32,7 @@ st.title("HRDC T3 Generator")
 
 course_title = st.text_input("Course Title", "")
 training_date = st.text_input("Training Date", "")
+employer_name = st.text_input("Name of Employer", "")
 
 st.write(
     "Upload an Excel file to generate T3 attendance lists."
@@ -61,6 +47,10 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is None:
     st.info("Please upload an Excel file.")
+    st.stop()
+
+if not employer_name.strip():
+    st.error("Please enter the name of the employer.")
     st.stop()
 
 # ---------------- READ EXCEL ----------------
@@ -108,20 +98,9 @@ if missing:
 
 proc_df = df[list(column_map.values())].copy()
 proc_df.rename(columns={
-    column_map["Name of Employer"]: "Name of Employer",
-    column_map["Name of Trainees"]: "Name of Trainees",
-    column_map["HRDCorp Claim"]: "HRDCorp Claim"
+    column_map["Name of Trainees"]: "Name of Trainees"
 }, inplace=True)
-
-# ---------------- FILTER HRDC ----------------
-
-proc_df = proc_df[
-    proc_df["HRDCorp Claim"]
-    .astype(str)
-    .str.strip()
-    .str.lower()
-    == "yes"
-]
+proc_df["Name of Employer"] = employer_name.strip()
 
 # ---------------- REMOVE BLANK TRAINEES ----------------
 
