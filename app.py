@@ -28,6 +28,61 @@ st.set_page_config(
     layout="wide"
 )
 
+st.session_state.setdefault("generator_page", "T3 Attendance")
+t3_background, t3_hover = (
+    ("#2f5be7", "#2449c4")
+    if st.session_state.generator_page == "T3 Attendance"
+    else ("#aeb4bd", "#9299a3")
+)
+jd14_background, jd14_hover = (
+    ("#24a148", "#198038")
+    if st.session_state.generator_page == "JD14 Claim Declaration"
+    else ("#aeb4bd", "#9299a3")
+)
+generator_style = """
+    <style>
+    div.st-key-generator_t3 button,
+    div.st-key-generator_jd14 button {
+        border-radius: 999px !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        padding: 0.35rem 1rem !important;
+        border: 0 !important;
+    }
+    div.st-key-generator_t3 button { background: __T3_BACKGROUND__ !important; }
+    div.st-key-generator_t3 button:hover { background: __T3_HOVER__ !important; }
+    div.st-key-generator_jd14 button { background: __JD14_BACKGROUND__ !important; }
+    div.st-key-generator_jd14 button:hover { background: __JD14_HOVER__ !important; }
+    </style>
+"""
+for placeholder, color in (
+    ("__T3_BACKGROUND__", t3_background),
+    ("__T3_HOVER__", t3_hover),
+    ("__JD14_BACKGROUND__", jd14_background),
+    ("__JD14_HOVER__", jd14_hover),
+):
+    generator_style = generator_style.replace(placeholder, color)
+st.markdown(generator_style, unsafe_allow_html=True)
+st.caption("Choose a generator")
+generator_col, jd14_col, _ = st.columns([0.14, 0.28, 0.58])
+with generator_col:
+    t3_mark = "✓" if st.session_state.generator_page == "T3 Attendance" else "+"
+    if st.button("T3 Attendance  " + t3_mark, key="generator_t3"):
+        st.session_state.generator_page = "T3 Attendance"
+        st.rerun()
+with jd14_col:
+    jd14_mark = "✓" if st.session_state.generator_page == "JD14 Claim Declaration" else "+"
+    if st.button("JD14 Claim Declaration  " + jd14_mark, key="generator_jd14"):
+        st.session_state.generator_page = "JD14 Claim Declaration"
+        st.rerun()
+
+generator = st.session_state.generator_page
+if generator == "JD14 Claim Declaration":
+    from jd14 import render_jd14
+
+    render_jd14()
+    st.stop()
+
 st.title("HRDC T3 Generator")
 
 course_title = st.text_input("Course Title", "")
